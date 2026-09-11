@@ -27,7 +27,7 @@ jobs:
             --linux-packages linux-image \
             --mirror-bootstrap http://deb.debian.org/debian/ \
             --mirror-binary http://deb.debian.org/debian/ \
-            --mirror-security http://security.debian.org/debian-security/ \
+            --mirror-binary-security http://security.debian.org/debian-security/ \
             --mirror-chroot-security http://security.debian.org/debian-security/
 
       - name: Copiar archivos de marca de Cranberry OS
