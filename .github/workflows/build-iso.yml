@@ -25,12 +25,13 @@ jobs:
             --architecture amd64 \
             --binary-images iso-hybrid \
             --archive-areas "main contrib non-free non-free-firmware" \
-            --linux-packages "" \
+            --firmware-chroot false \
+            --firmware-binary false \
             --mirror-bootstrap https://deb.debian.org/debian \
             --mirror-binary https://deb.debian.org/debian \
             --security false
 
-      - name: Agregar el kernel como paquete normal (evita el bug de deteccion automatica)
+      - name: Agregar el kernel como paquete normal
         run: |
           mkdir -p config/package-lists
           echo "linux-image-amd64" > config/package-lists/kernel.list.chroot
