@@ -1,0 +1,50 @@
+name: Build Cranberry OS ISO
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar archivos del repositorio
+        uses: actions/checkout@v4
+
+      - name: Instalar live-build
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y live-build
+
+      - name: Configurar la imagen (solo terminal, sin entorno grafico)
+        run: |
+          lb config \
+            --distribution bookworm \
+            --architecture amd64 \
+            --binary-images iso-hybrid \
+            --archive-areas "main contrib non-free non-free-firmware" \
+            --linux-packages linux-image
+
+      - name: Copiar archivos de marca de Cranberry OS
+        run: |
+          mkdir -p config/includes.chroot/etc
+          cp files/etc/issue      config/includes.chroot/etc/issue
+          cp files/etc/motd       config/includes.chroot/etc/motd
+          cp files/etc/os-release config/includes.chroot/etc/os-release
+          cp files/etc/bash.bashrc config/includes.chroot/etc/bash.bashrc
+
+      - name: Construir la ISO
+        run: sudo lb build
+
+      - name: Renombrar la ISO
+        run: |
+          ISO_FILE=$(ls *.iso | head -n1)
+          mv "$ISO_FILE" cranberry-os.iso
+
+      - name: Subir la ISO como descarga
+        uses: actions/upload-artifact@v4
+        with:
+          name: cranberry-os-iso
+          path: cranberry-os.iso
+          retention-days: 14
