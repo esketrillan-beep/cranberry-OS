@@ -20,6 +20,7 @@ jobs:
       - name: Configurar la imagen (solo terminal, sin entorno grafico)
         run: |
           lb config \
+            --mode debian \
             --distribution bookworm \
             --architecture amd64 \
             --binary-images iso-hybrid \
