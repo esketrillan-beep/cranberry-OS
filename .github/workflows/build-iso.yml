@@ -12,7 +12,7 @@ jobs:
       - name: Descargar archivos del repositorio
         uses: actions/checkout@v4
 
-      - name: Instalar live-build y herramientas de arranque
+      - name: Instalar live-build y herramientas de arranque (host)
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -34,10 +34,10 @@ jobs:
             --mirror-binary https://deb.debian.org/debian \
             --security false
 
-      - name: Agregar el kernel y herramientas de arranque dentro del sistema
+      - name: Agregar el kernel y herramientas de arranque dentro del sistema (chroot)
         run: |
           mkdir -p config/package-lists
-          printf "linux-image-amd64\nisolinux\nsyslinux-common\nlibrsvg2-bin\n" > config/package-lists/kernel.list.chroot
+          printf "linux-image-amd64\nisolinux\nsyslinux-common\nsyslinux-utils\nlibrsvg2-bin\nnetpbm\n" > config/package-lists/kernel.list.chroot
 
       - name: Arreglar rutas viejas dentro del sistema
         run: |
