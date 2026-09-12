@@ -38,9 +38,9 @@ jobs:
 
       - name: Arreglar las rutas viejas de isolinux dentro del sistema
         run: |
-          mkdir -p config/hooks/normal
-          printf '#!/bin/sh\nset -e\nmkdir -p /usr/lib/syslinux\nln -sf /usr/lib/ISOLINUX/isolinux.bin /usr/lib/syslinux/isolinux.bin\nln -sf /usr/lib/syslinux/modules/bios/vesamenu.c32 /usr/lib/syslinux/vesamenu.c32\n' > config/hooks/normal/9010-fix-isolinux-paths.hook.chroot
-          chmod +x config/hooks/normal/9010-fix-isolinux-paths.hook.chroot
+          mkdir -p config/hooks
+          printf '#!/bin/sh\nset -e\nmkdir -p /usr/lib/syslinux\nln -sf /usr/lib/ISOLINUX/isolinux.bin /usr/lib/syslinux/isolinux.bin\nln -sf /usr/lib/syslinux/modules/bios/vesamenu.c32 /usr/lib/syslinux/vesamenu.c32\n' > config/hooks/999-fix-isolinux-paths.chroot
+          chmod +x config/hooks/999-fix-isolinux-paths.chroot
 
       - name: Copiar archivos de marca de Cranberry OS
         run: |
