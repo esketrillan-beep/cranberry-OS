@@ -1,0 +1,13 @@
+#!/bin/sh
+set -e
+n=$#
+last=$(eval echo \"\${$n}\")
+i=1
+newset=""
+while [ $i -lt $n ]; do
+  val=$(eval echo \"\${$i}\")
+  newset="$newset \"$val\""
+  i=$((i+1))
+done
+eval set -- $newset
+exec rsvg-convert "$@" -o "$last"
