@@ -34,12 +34,12 @@ jobs:
       - name: Agregar el kernel y herramientas de arranque dentro del sistema
         run: |
           mkdir -p config/package-lists
-          printf "linux-image-amd64\nisolinux\nsyslinux-common\n" > config/package-lists/kernel.list.chroot
+          printf "linux-image-amd64\nisolinux\nsyslinux-common\nlibrsvg2-bin\n" > config/package-lists/kernel.list.chroot
 
-      - name: Arreglar las rutas viejas de isolinux dentro del sistema
+      - name: Arreglar rutas viejas y comandos renombrados dentro del sistema
         run: |
           mkdir -p config/hooks
-          printf '#!/bin/sh\nset -e\nmkdir -p /usr/lib/syslinux\nln -sf /usr/lib/ISOLINUX/isolinux.bin /usr/lib/syslinux/isolinux.bin\nln -sf /usr/lib/syslinux/modules/bios/vesamenu.c32 /usr/lib/syslinux/vesamenu.c32\n' > config/hooks/999-fix-isolinux-paths.chroot
+          printf '#!/bin/sh\nset -e\nmkdir -p /usr/lib/syslinux\nln -sf /usr/lib/ISOLINUX/isolinux.bin /usr/lib/syslinux/isolinux.bin\nln -sf /usr/lib/syslinux/modules/bios/vesamenu.c32 /usr/lib/syslinux/vesamenu.c32\nln -sf /usr/bin/rsvg-convert /usr/bin/rsvg\n' > config/hooks/999-fix-isolinux-paths.chroot
           chmod +x config/hooks/999-fix-isolinux-paths.chroot
 
       - name: Copiar archivos de marca de Cranberry OS
