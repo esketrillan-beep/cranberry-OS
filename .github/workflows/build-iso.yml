@@ -1,4 +1,4 @@
-name: Build Cranberry OS Nexus ISO
+name: Build Cranberry OS ISO
 
 on:
   workflow_dispatch:
@@ -30,6 +30,8 @@ jobs:
           cp -a /usr/share/live/build/bootloaders/isolinux/. config/bootloaders/isolinux/
           find /usr/lib -iname "isolinux.bin" -exec cp -v {} config/bootloaders/isolinux/ \;
           find /usr/lib/syslinux/modules/bios -iname "*.c32" -exec cp -v {} config/bootloaders/isolinux/ \;
+          echo "--- Contenido final de config/bootloaders/isolinux ---"
+          ls -la config/bootloaders/isolinux/
 
       - name: Configurar la imagen (solo terminal, sin entorno grafico)
         run: |
@@ -53,7 +55,7 @@ jobs:
       - name: Agregar paquetes para el modo grafico Nexus
         run: |
           mkdir -p config/package-lists
-          printf "xserver-xorg\nxinit\nxserver-xorg-video-all\nxserver-xorg-input-all\nicewm\nxterm\nfirefox-esr\npcmanfm\n" > config/package-lists/nexus.list.chroot
+          printf "xserver-xorg\nxinit\nxserver-xorg-video-all\nxserver-xorg-input-all\nicewm\nxterm\n" > config/package-lists/nexus.list.chroot
 
       - name: Arreglar rutas viejas dentro del sistema
         run: |
@@ -67,24 +69,22 @@ jobs:
           printf '#!/bin/sh\nset -e\necho "root:cranberry" | chpasswd\n' > config/hooks/998-set-root-password.chroot
           chmod +x config/hooks/998-set-root-password.chroot
 
-      - name: Configurar escritorio Nexus (IceWM, tema NanoBlue, wallpaper, menu)
+      - name: Configurar escritorio Nexus (IceWM con tema NanoBlue y wallpaper)
         run: |
           mkdir -p config/hooks
           cat > config/hooks/997-nexus-desktop.chroot << 'HOOK'
           #!/bin/sh
           set -e
+
           mkdir -p /root/.icewm
 
+          # Tema NanoBlue (viene incluido con el propio paquete icewm)
           printf 'Theme="NanoBlue/default.theme"\n' > /root/.icewm/theme
 
+          # Fondo de pantalla fijo
           printf 'DesktopBackgroundImage="/usr/share/backgrounds/cranberry-nexus-wallpaper.jpg"\nDesktopBackgroundScaled=1\nDesktopBackgroundCenter=0\n' > /root/.icewm/preferences
 
-          cat > /root/.icewm/menu << 'MENU'
-          prog "Internet" firefox firefox-esr
-          prog "Archivos" file-manager pcmanfm
-          prog "Terminal" terminal xterm
-          MENU
-
+          # startx entra directo a icewm
           printf 'exec icewm-session\n' > /root/.xinitrc
           chmod +x /root/.xinitrc
           HOOK
@@ -108,11 +108,11 @@ jobs:
       - name: Renombrar la ISO
         run: |
           ISO_FILE=$(ls *.iso | head -n1)
-          mv "$ISO_FILE" cranberry-os-nexus.iso
+          mv "$ISO_FILE" cranberry-os.iso
 
       - name: Subir la ISO como descarga
         uses: actions/upload-artifact@v4
         with:
-          name: cranberry-os-nexus-iso
-          path: cranberry-os-nexus.iso
+          name: cranberry-os-iso
+          path: cranberry-os.iso
           retention-days: 14
