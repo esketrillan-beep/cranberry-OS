@@ -55,7 +55,7 @@ jobs:
       - name: Agregar paquetes para el modo grafico Nexus
         run: |
           mkdir -p config/package-lists
-          printf "xserver-xorg\nxinit\nxserver-xorg-video-all\nxserver-xorg-input-all\nicewm\nicewm-themes\nxterm\n" > config/package-lists/nexus.list.chroot
+          printf "xserver-xorg\nxinit\nxserver-xorg-video-all\nxserver-xorg-input-all\nicewm\nxterm\n" > config/package-lists/nexus.list.chroot
 
       - name: Arreglar rutas viejas dentro del sistema
         run: |
@@ -69,26 +69,10 @@ jobs:
           printf '#!/bin/sh\nset -e\necho "root:cranberry" | chpasswd\n' > config/hooks/998-set-root-password.chroot
           chmod +x config/hooks/998-set-root-password.chroot
 
-      - name: Configurar escritorio Nexus (IceWM con tema estilo Windows 95)
+      - name: Configurar escritorio Nexus (IceWM)
         run: |
           mkdir -p config/hooks
-          cat > config/hooks/997-nexus-desktop.chroot << 'HOOK'
-          #!/bin/sh
-          set -e
-
-          mkdir -p /root/.icewm
-
-          # Buscamos cualquier tema estilo Windows 95 que traiga icewm-themes
-          THEME_DIR=$(find /usr/share/icewm/themes -maxdepth 1 -iname "*redmond*" -type d | head -n1)
-          if [ -n "$THEME_DIR" ]; then
-              THEME_NAME=$(basename "$THEME_DIR")
-              echo "Theme=\"${THEME_NAME}/default.theme\"" > /root/.icewm/theme
-          fi
-
-          # startx entra directo a icewm
-          printf 'exec icewm-session\n' > /root/.xinitrc
-          chmod +x /root/.xinitrc
-          HOOK
+          printf '#!/bin/sh\nset -e\nprintf "exec icewm-session\\n" > /root/.xinitrc\nchmod +x /root/.xinitrc\n' > config/hooks/997-nexus-desktop.chroot
           chmod +x config/hooks/997-nexus-desktop.chroot
 
       - name: Copiar archivos de marca de Cranberry OS
