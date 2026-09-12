@@ -29,10 +29,10 @@ jobs:
           mkdir -p config/bootloaders/isolinux
           # Config base (menus, splash) que trae live-build por defecto
           cp -a /usr/share/live/build/bootloaders/isolinux/. config/bootloaders/isolinux/
-          # isolinux.bin y los .c32 (vesamenu.c32, libutil.c32, etc.) NO vienen
-          # incluidos en ese theme por defecto - los tomamos de los paquetes reales
+          # isolinux.bin real (el theme por defecto no lo incluye)
           find /usr/lib -iname "isolinux.bin" -exec cp -v {} config/bootloaders/isolinux/ \;
-          find /usr/lib/syslinux -iname "*.c32" -exec cp -v {} config/bootloaders/isolinux/ \;
+          # Solo los modulos .c32 de BIOS (los de efi64 son incompatibles y rompen vesamenu.c32)
+          find /usr/lib/syslinux/modules/bios -iname "*.c32" -exec cp -v {} config/bootloaders/isolinux/ \;
           echo "--- Contenido final de config/bootloaders/isolinux ---"
           ls -la config/bootloaders/isolinux/
 
