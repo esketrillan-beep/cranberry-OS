@@ -30,8 +30,6 @@ jobs:
           cp -a /usr/share/live/build/bootloaders/isolinux/. config/bootloaders/isolinux/
           find /usr/lib -iname "isolinux.bin" -exec cp -v {} config/bootloaders/isolinux/ \;
           find /usr/lib/syslinux/modules/bios -iname "*.c32" -exec cp -v {} config/bootloaders/isolinux/ \;
-          echo "--- Contenido final de config/bootloaders/isolinux ---"
-          ls -la config/bootloaders/isolinux/
 
       - name: Configurar la imagen (solo terminal, sin entorno grafico)
         run: |
@@ -52,10 +50,10 @@ jobs:
           mkdir -p config/package-lists
           printf "linux-image-amd64\nisolinux\nsyslinux-common\nlibrsvg2-bin\n" > config/package-lists/kernel.list.chroot
 
-      - name: Agregar paquetes para el modo grafico Nexus
+      - name: Agregar el escritorio completo Nexus (X11, IceWM, archivos, terminal, navegador)
         run: |
           mkdir -p config/package-lists
-          printf "xserver-xorg\nxinit\nxserver-xorg-video-all\nxserver-xorg-input-all\nicewm\nxterm\n" > config/package-lists/nexus.list.chroot
+          printf "xserver-xorg\nxinit\nxserver-xorg-video-all\nxserver-xorg-input-all\nicewm\nxterm\nlxterminal\npcmanfm\nfirefox-esr\nadwaita-icon-theme\n" > config/package-lists/nexus.list.chroot
 
       - name: Arreglar rutas viejas dentro del sistema
         run: |
@@ -69,7 +67,7 @@ jobs:
           printf '#!/bin/sh\nset -e\necho "root:cranberry" | chpasswd\n' > config/hooks/998-set-root-password.chroot
           chmod +x config/hooks/998-set-root-password.chroot
 
-      - name: Configurar escritorio Nexus (IceWM con tema NanoBlue y wallpaper)
+      - name: Configurar escritorio Nexus (tema propio, iconos, escritorio, navegador)
         run: |
           mkdir -p config/hooks
           cat > config/hooks/997-nexus-desktop.chroot << 'HOOK'
@@ -77,18 +75,36 @@ jobs:
           set -e
 
           mkdir -p /root/.icewm
+          mkdir -p /root/Desktop
+          mkdir -p /root/.config/pcmanfm/default
 
-          # Tema NanoBlue (viene incluido con el propio paquete icewm)
-          printf 'Theme="NanoBlue/default.theme"\n' > /root/.icewm/theme
+          printf 'Look="flat"\nIconThemeName="Adwaita"\nActiveBorderBg="#1a1a21"\nInactiveBorderBg="#0d0d10"\nActiveTitleBarBg="#17171c"\nActiveTitleBarFg="#e0559f"\nInactiveTitleBarBg="#0d0d10"\nInactiveTitleBarFg="#6b6b75"\nMenuBg="#131318"\nMenuFg="#e8e6ea"\nActiveMenuItemBg="#e0559f"\nActiveMenuItemFg="#000000"\nTaskBarBg="#131318"\nTaskBarFg="#e0559f"\nButtonBg="#1a1a21"\nButtonFg="#e8e6ea"\n' > /root/.icewm/preferences
 
-          # Fondo de pantalla fijo
-          printf 'DesktopBackgroundImage="/usr/share/backgrounds/cranberry-nexus-wallpaper.jpg"\nDesktopBackgroundScaled=1\nDesktopBackgroundCenter=0\n' > /root/.icewm/preferences
+          printf 'prog "Terminal" utilities-terminal lxterminal\nprog "Archivos" system-file-manager pcmanfm\nprog "Navegador" web-browser firefox-esr\n' > /root/.icewm/toolbar
 
-          # startx entra directo a icewm
-          printf 'exec icewm-session\n' > /root/.xinitrc
+          printf '[Desktop Entry]\nType=Application\nName=Terminal\nExec=lxterminal\nIcon=utilities-terminal\n' > /root/Desktop/terminal.desktop
+          printf '[Desktop Entry]\nType=Application\nName=Archivos\nExec=pcmanfm\nIcon=system-file-manager\n' > /root/Desktop/files.desktop
+          printf '[Desktop Entry]\nType=Application\nName=Navegador\nExec=firefox-esr\nIcon=web-browser\n' > /root/Desktop/firefox.desktop
+          chmod +x /root/Desktop/terminal.desktop /root/Desktop/files.desktop /root/Desktop/firefox.desktop
+
+          printf '[*]\nwallpaper_mode=stretch\nwallpaper=/usr/share/backgrounds/cranberry-nexus-wallpaper.jpg\ndesktop_bg=#0b0b0e\ndesktop_fg=#e8e6ea\ndesktop_shadow=#000000\nshow_wm_menu=0\n' > /root/.config/pcmanfm/default/desktop-items-0.conf
+
+          printf 'pcmanfm --desktop --profile default &\nexec icewm-session\n' > /root/.xinitrc
           chmod +x /root/.xinitrc
           HOOK
           chmod +x config/hooks/997-nexus-desktop.chroot
+
+      - name: Arrancar directo al escritorio (autologin, sin pedir usuario/clave)
+        run: |
+          mkdir -p config/hooks
+          cat > config/hooks/996-nexus-autologin.chroot << 'HOOK'
+          #!/bin/sh
+          set -e
+          mkdir -p /etc/systemd/system/getty@tty1.service.d
+          printf '%s\n' '[Service]' 'ExecStart=' 'ExecStart=-/sbin/agetty --autologin root --noclear %I $TERM' > /etc/systemd/system/getty@tty1.service.d/override.conf
+          printf '%s\n' 'if [ -z "$DISPLAY" ] && [ "$(tty)" = "/dev/tty1" ]; then' '  exec startx' 'fi' >> /root/.bash_profile
+          HOOK
+          chmod +x config/hooks/996-nexus-autologin.chroot
 
       - name: Copiar archivos de marca de Cranberry OS
         run: |
