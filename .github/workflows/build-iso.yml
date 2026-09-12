@@ -15,7 +15,7 @@ jobs:
       - name: Instalar live-build y herramientas de arranque
         run: |
           sudo apt-get update
-          sudo apt-get install -y live-build isolinux syslinux-common syslinux-utils mtools xorriso dosfstools
+          sudo apt-get install -y live-build isolinux syslinux-common syslinux-efi grub-pc-bin grub-efi-amd64-bin mtools xorriso dosfstools
 
       - name: Configurar la imagen (solo terminal, sin entorno grafico)
         run: |
@@ -24,7 +24,6 @@ jobs:
             --distribution bookworm \
             --architecture amd64 \
             --binary-images iso \
-            --bootloaders syslinux \
             --archive-areas "main contrib non-free non-free-firmware" \
             --firmware-chroot false \
             --firmware-binary false \
