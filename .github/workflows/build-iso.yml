@@ -69,21 +69,38 @@ jobs:
           printf '#!/bin/sh\nset -e\necho "root:cranberry" | chpasswd\n' > config/hooks/998-set-root-password.chroot
           chmod +x config/hooks/998-set-root-password.chroot
 
-      - name: Configurar escritorio Nexus (IceWM)
+      - name: Configurar escritorio Nexus (IceWM con tema NanoBlue y wallpaper)
         run: |
           mkdir -p config/hooks
-          printf '#!/bin/sh\nset -e\nprintf "exec icewm-session\\n" > /root/.xinitrc\nchmod +x /root/.xinitrc\n' > config/hooks/997-nexus-desktop.chroot
+          cat > config/hooks/997-nexus-desktop.chroot << 'HOOK'
+          #!/bin/sh
+          set -e
+
+          mkdir -p /root/.icewm
+
+          # Tema NanoBlue (viene incluido con el propio paquete icewm)
+          printf 'Theme="NanoBlue/default.theme"\n' > /root/.icewm/theme
+
+          # Fondo de pantalla fijo
+          printf 'DesktopBackgroundImage="/usr/share/backgrounds/cranberry-nexus-wallpaper.jpg"\nDesktopBackgroundScaled=1\nDesktopBackgroundCenter=0\n' > /root/.icewm/preferences
+
+          # startx entra directo a icewm
+          printf 'exec icewm-session\n' > /root/.xinitrc
+          chmod +x /root/.xinitrc
+          HOOK
           chmod +x config/hooks/997-nexus-desktop.chroot
 
       - name: Copiar archivos de marca de Cranberry OS
         run: |
           mkdir -p config/includes.chroot/etc
           mkdir -p config/includes.chroot/usr/bin
+          mkdir -p config/includes.chroot/usr/share/backgrounds
           cp files/etc/issue      config/includes.chroot/etc/issue
           cp files/etc/motd       config/includes.chroot/etc/motd
           cp files/etc/os-release config/includes.chroot/etc/os-release
           cp files/etc/bash.bashrc config/includes.chroot/etc/bash.bashrc
           cp files/usr/bin/rsvg   config/includes.chroot/usr/bin/rsvg
+          cp files/usr/share/backgrounds/cranberry-nexus-wallpaper.jpg config/includes.chroot/usr/share/backgrounds/cranberry-nexus-wallpaper.jpg
 
       - name: Construir la ISO
         run: sudo lb build
