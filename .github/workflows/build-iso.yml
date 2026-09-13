@@ -67,6 +67,18 @@ jobs:
           printf '#!/bin/sh\nset -e\necho "root:cranberry" | chpasswd\n' > config/hooks/998-set-root-password.chroot
           chmod +x config/hooks/998-set-root-password.chroot
 
+      - name: Configurar pantalla de carga ASCII
+        run: |
+          mkdir -p config/hooks config/includes.chroot/usr/local/bin
+          cp files/usr/local/bin/cranberry-bootscreen config/includes.chroot/usr/local/bin/cranberry-bootscreen
+          cat > config/hooks/996-boot-splash.chroot << 'HOOK'
+          #!/bin/sh
+          set -e
+          chmod +x /usr/local/bin/cranberry-bootscreen
+          sed -i 's#^\(1:2345:respawn:\).*getty.*tty1.*#\1/usr/local/bin/cranberry-bootscreen#' /etc/inittab
+          HOOK
+          chmod +x config/hooks/996-boot-splash.chroot
+
       - name: Configurar arranque del escritorio propio (shell HTML)
         run: |
           mkdir -p config/hooks
@@ -86,31 +98,4 @@ jobs:
           HOOK
           chmod +x config/hooks/997-win7style-desktop.chroot
 
-      - name: Copiar archivos de marca de Cranberry OS y el shell propio
-        run: |
-          mkdir -p config/includes.chroot/etc
-          mkdir -p config/includes.chroot/usr/bin
-          mkdir -p config/includes.chroot/usr/share/cranberry-shell
-          mkdir -p config/includes.chroot/usr/local/bin
-          cp files/etc/issue      config/includes.chroot/etc/issue
-          cp files/etc/motd       config/includes.chroot/etc/motd
-          cp files/etc/os-release config/includes.chroot/etc/os-release
-          cp files/etc/bash.bashrc config/includes.chroot/etc/bash.bashrc
-          cp files/usr/bin/rsvg   config/includes.chroot/usr/bin/rsvg
-          cp files/usr/share/cranberry-shell/index.html config/includes.chroot/usr/share/cranberry-shell/index.html
-          cp files/usr/local/bin/cranberry-launcherd config/includes.chroot/usr/local/bin/cranberry-launcherd
-
-      - name: Construir la ISO
-        run: sudo lb build
-
-      - name: Renombrar la ISO
-        run: |
-          ISO_FILE=$(ls *.iso | head -n1)
-          mv "$ISO_FILE" cranberry-os-win7style.iso
-
-      - name: Subir la ISO como descarga
-        uses: actions/upload-artifact@v4
-        with:
-          name: cranberry-os-win7style-iso
-          path: cranberry-os-win7style.iso
-          retention-days: 14
+      - name: Copiar archivos de marca de Cranberry OS y el
