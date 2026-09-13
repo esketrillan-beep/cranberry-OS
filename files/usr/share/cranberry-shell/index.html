@@ -107,6 +107,10 @@
       <div class="glyph">&gt;_</div>
       <span>Terminal</span>
     </div>
+    <div class="icon" onclick="launch('install')">
+      <div class="glyph">&#128190;</div>
+      <span>Instalar Cranberry OS</span>
+    </div>
   </div>
 
   <div class="start-menu" id="startMenu">
@@ -114,6 +118,7 @@
     <div class="item" onclick="launch('firefox'); toggleStart()"><span class="glyph">🌐</span> Internet</div>
     <div class="item" onclick="launch('files'); toggleStart()"><span class="glyph">🗀</span> Explorador de archivos</div>
     <div class="item" onclick="launch('terminal'); toggleStart()"><span class="glyph">&gt;_</span> Terminal</div>
+    <div class="item" onclick="launch('install'); toggleStart()"><span class="glyph">&#128190;</span> Instalar Cranberry OS</div>
   </div>
 
   <div class="taskbar">
@@ -148,6 +153,7 @@
     if (app === 'firefox') return 'Internet';
     if (app === 'files') return 'Explorador de archivos';
     if (app === 'terminal') return 'Terminal';
+    if (app === 'install') return 'el instalador';
     return app;
   }
 
