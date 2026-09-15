@@ -93,9 +93,8 @@ jobs:
 
       - name: Agregar el instalador de Cranberry OS
         run: |
-          mkdir -p config/includes.chroot/usr/local/bin config/includes.chroot/usr/share/backgrounds config/hooks
+          mkdir -p config/includes.chroot/usr/local/bin config/hooks
           cp files/usr/local/bin/cranberry-install config/includes.chroot/usr/local/bin/cranberry-install
-          cp files/usr/share/backgrounds/cranberry-logo.png config/includes.chroot/usr/share/backgrounds/cranberry-logo.png
           printf '#!/bin/sh\nset -e\nchmod +x /usr/local/bin/cranberry-install\n' > config/hooks/995-installer.chroot
           chmod +x config/hooks/995-installer.chroot
 
@@ -144,7 +143,7 @@ jobs:
           fi
           chmod +x /root/Desktop/*.desktop 2>/dev/null || true
 
-          printf '[*]\nwallpaper_mode=stretch\nwallpaper=/usr/share/backgrounds/cranberry-logo.png\ndesktop_bg=#0b0b0e\ndesktop_fg=#e8e6ea\ndesktop_shadow=#000000\nshow_wm_menu=0\n' > /root/.config/pcmanfm/default/desktop-items-0.conf
+          printf '[*]\nwallpaper_mode=color\ndesktop_bg=#0b0b0e\ndesktop_fg=#e8e6ea\ndesktop_shadow=#000000\nshow_wm_menu=0\n' > /root/.config/pcmanfm/default/desktop-items-0.conf
 
           printf '#!/bin/sh\nfor S in network-manager NetworkManager; do\n  if [ -x "/etc/init.d/$S" ]; then\n    service "$S" start >/dev/null 2>&1 || true\n    break\n  fi\ndone\ncommand -v nm-applet >/dev/null 2>&1 && nm-applet &\npcmanfm --desktop --profile default &\nexec icewm-session\n' > /root/.xinitrc
           chmod +x /root/.xinitrc
