@@ -1,4 +1,4 @@
-name: Build Cranberry OS Nexus ISO
+name: Build Cranberry OS Win7Style ISO
 
 on:
   workflow_dispatch:
@@ -24,10 +24,22 @@ jobs:
         run: |
           sudo sed -i '/# Hack around the removal of support in gfxboot/,/rm -rf "\$tmpdir"/d' /usr/lib/live/build/lb_binary_syslinux
 
-      - name: Crear tema isolinux con isolinux.bin y modulos reales
+      - name: Crear tema isolinux con isolinux.bin, splash propio y opcion de instalar
         run: |
           mkdir -p config/bootloaders/isolinux
           cp -a /usr/share/live/build/bootloaders/isolinux/. config/bootloaders/isolinux/
+
+          rm -f config/bootloaders/isolinux/splash.svg.in
+          cp files/boot-splash/splash.png config/bootloaders/isolinux/splash.png
+
+          cat >> config/bootloaders/isolinux/live.cfg.in << 'EOF'
+
+          label install-@FLAVOUR@
+          	menu label ^Instalar Cranberry OS
+          	kernel @KERNEL@
+          	append initrd=@INITRD@ boot=live config @LB_BOOTAPPEND_LIVE@ cranberry-install
+          EOF
+
           find /usr/lib -iname "isolinux.bin" -exec cp -v {} config/bootloaders/isolinux/ \;
           find /usr/lib/syslinux/modules/bios -iname "*.c32" -exec cp -v {} config/bootloaders/isolinux/ \;
 
@@ -50,10 +62,10 @@ jobs:
           mkdir -p config/package-lists
           printf "linux-image-amd64\nisolinux\nsyslinux-common\nlibrsvg2-bin\nparted\nrsync\ngrub-pc\n" > config/package-lists/kernel.list.chroot
 
-      - name: Agregar paquetes para el modo grafico Nexus
+      - name: Agregar paquetes para el escritorio propio (navegador, archivos, wifi)
         run: |
           mkdir -p config/package-lists
-          printf "xserver-xorg\nxinit\nxserver-xorg-video-all\nxserver-xorg-input-all\nicewm\nxterm\nfirefox-esr\npcmanfm\n" > config/package-lists/nexus.list.chroot
+          printf "xserver-xorg\nxinit\nxserver-xorg-video-all\nxserver-xorg-input-all\nopenbox\nxterm\nfirefox-esr\npcmanfm\npython3\nfeh\nnetwork-manager\nnetwork-manager-gnome\nfirmware-linux\n" > config/package-lists/win7style.list.chroot
 
       - name: Arreglar rutas viejas dentro del sistema
         run: |
@@ -67,7 +79,7 @@ jobs:
           printf '#!/bin/sh\nset -e\necho "root:cranberry" | chpasswd\n' > config/hooks/998-set-root-password.chroot
           chmod +x config/hooks/998-set-root-password.chroot
 
-      - name: Configurar pantalla de carga ASCII
+      - name: Configurar pantalla de carga ASCII (y arranque directo al instalador)
         run: |
           mkdir -p config/hooks config/includes.chroot/usr/local/bin
           cp files/usr/local/bin/cranberry-bootscreen config/includes.chroot/usr/local/bin/cranberry-bootscreen
@@ -87,41 +99,44 @@ jobs:
           printf '#!/bin/sh\nset -e\nchmod +x /usr/local/bin/cranberry-install\n' > config/hooks/995-installer.chroot
           chmod +x config/hooks/995-installer.chroot
 
-      - name: Configurar escritorio Nexus (IceWM, tema NanoBlue, wallpaper, menu)
+      - name: Habilitar NetworkManager al arrancar
         run: |
           mkdir -p config/hooks
-          cat > config/hooks/997-nexus-desktop.chroot << 'HOOK'
+          printf '#!/bin/sh\nset -e\nupdate-rc.d network-manager defaults\n' > config/hooks/994-networkmanager.chroot
+          chmod +x config/hooks/994-networkmanager.chroot
+
+      - name: Configurar arranque del escritorio propio (shell HTML, sin IceWM)
+        run: |
+          mkdir -p config/hooks
+          cat > config/hooks/997-win7style-desktop.chroot << 'HOOK'
           #!/bin/sh
           set -e
-          mkdir -p /root/.icewm
+          chmod +x /usr/local/bin/cranberry-launcherd
 
-          printf 'Theme="NanoBlue/default.theme"\n' > /root/.icewm/theme
-
-          printf 'DesktopBackgroundImage="/usr/share/backgrounds/cranberry-nexus-wallpaper.jpg"\nDesktopBackgroundScaled=1\nDesktopBackgroundCenter=0\n' > /root/.icewm/preferences
-
-          cat > /root/.icewm/menu << 'MENU'
-          prog "Internet" firefox firefox-esr
-          prog "Archivos" file-manager pcmanfm
-          prog "Terminal" terminal xterm
-          prog "Instalar Cranberry OS" harddrive xterm -T "Instalador de Cranberry OS" -e /usr/local/bin/cranberry-install
-          MENU
-
-          printf 'exec icewm-session\n' > /root/.xinitrc
+          cat > /root/.xinitrc << 'XINITRC'
+          #!/bin/sh
+          /usr/local/bin/cranberry-launcherd &
+          openbox &
+          sleep 1
+          exec firefox-esr --kiosk file:///usr/share/cranberry-shell/index.html
+          XINITRC
           chmod +x /root/.xinitrc
           HOOK
-          chmod +x config/hooks/997-nexus-desktop.chroot
+          chmod +x config/hooks/997-win7style-desktop.chroot
 
-      - name: Copiar archivos de marca de Cranberry OS
+      - name: Copiar archivos de marca de Cranberry OS y el shell propio
         run: |
           mkdir -p config/includes.chroot/etc
           mkdir -p config/includes.chroot/usr/bin
-          mkdir -p config/includes.chroot/usr/share/backgrounds
+          mkdir -p config/includes.chroot/usr/share/cranberry-shell
+          mkdir -p config/includes.chroot/usr/local/bin
           cp files/etc/issue      config/includes.chroot/etc/issue
           cp files/etc/motd       config/includes.chroot/etc/motd
           cp files/etc/os-release config/includes.chroot/etc/os-release
           cp files/etc/bash.bashrc config/includes.chroot/etc/bash.bashrc
           cp files/usr/bin/rsvg   config/includes.chroot/usr/bin/rsvg
-          cp files/usr/share/backgrounds/cranberry-nexus-wallpaper.jpg config/includes.chroot/usr/share/backgrounds/cranberry-nexus-wallpaper.jpg
+          cp files/usr/share/cranberry-shell/index.html config/includes.chroot/usr/share/cranberry-shell/index.html
+          cp files/usr/local/bin/cranberry-launcherd config/includes.chroot/usr/local/bin/cranberry-launcherd
 
       - name: Construir la ISO
         run: sudo lb build
@@ -129,11 +144,11 @@ jobs:
       - name: Renombrar la ISO
         run: |
           ISO_FILE=$(ls *.iso | head -n1)
-          mv "$ISO_FILE" cranberry-os-nexus.iso
+          mv "$ISO_FILE" cranberry-os-win7style.iso
 
       - name: Subir la ISO como descarga
         uses: actions/upload-artifact@v4
         with:
-          name: cranberry-os-nexus-iso
-          path: cranberry-os-nexus.iso
+          name: cranberry-os-win7style-iso
+          path: cranberry-os-win7style.iso
           retention-days: 14
