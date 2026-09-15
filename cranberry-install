@@ -1,0 +1,134 @@
+#!/bin/sh
+# cranberry-install
+# Instalador guiado de Cranberry OS. Copia el sistema live actual a un
+# disco real, particiona, formatea, e instala el bootloader (GRUB BIOS).
+#
+# Requiere: whiptail, parted, rsync, grub-pc (todo instalado en el live)
+
+set -e
+
+TARGET=/mnt/cranberry-install
+LOGO=/usr/share/backgrounds/cranberry-logo.png
+FEH_PID=""
+
+if [ "$(id -u)" -ne 0 ]; then
+    echo "Este instalador debe correr como root."
+    exit 1
+fi
+
+# Si hay entorno grafico (DISPLAY) y el logo existe, lo mostramos en una
+# ventana aparte mientras el instalador de texto corre al lado.
+if [ -n "$DISPLAY" ] && [ -f "$LOGO" ] && command -v feh > /dev/null 2>&1; then
+    feh --geometry 260x260+40+40 --title "Cranberry OS" "$LOGO" &
+    FEH_PID=$!
+fi
+
+cleanup() {
+    [ -n "$FEH_PID" ] && kill "$FEH_PID" > /dev/null 2>&1 || true
+}
+trap cleanup EXIT
+
+whiptail --title "Instalador de Cranberry OS" --msgbox \
+"Bienvenido al instalador de Cranberry OS.
+
+Este asistente va a instalar Cranberry OS en un disco de esta computadora.
+
+ADVERTENCIA: todos los datos del disco que elijas seran borrados por completo. Asegurate de elegir el disco correcto." 16 62
+
+# --- Detectar el dispositivo del medio live (USB/CD) para excluirlo ---
+LIVE_DEV=""
+LIVE_MOUNT=$(mount | grep -m1 '/lib/live/mount/medium' || true)
+if [ -n "$LIVE_MOUNT" ]; then
+    LIVE_DEV=$(echo "$LIVE_MOUNT" | awk '{print $1}' | sed -E 's/p?[0-9]+$//')
+fi
+
+# --- Listar discos disponibles (excluyendo el medio live y loops/CD) ---
+MENU_ARGS=""
+COUNT=0
+while read -r NAME SIZE MODEL; do
+    DEV="/dev/$NAME"
+    [ "$DEV" = "$LIVE_DEV" ] && continue
+    case "$NAME" in
+        sr*|loop*) continue ;;
+    esac
+    MENU_ARGS="$MENU_ARGS $DEV \"$SIZE  $MODEL\""
+    COUNT=$((COUNT + 1))
+done <<EOF
+$(lsblk -dno NAME,SIZE,MODEL)
+EOF
+
+if [ "$COUNT" -eq 0 ]; then
+    whiptail --msgbox "No se encontro ningun disco valido para instalar. Cancelando." 10 50
+    exit 1
+fi
+
+DISK=$(eval whiptail --title "Elige el disco de instalacion" \
+    --menu "\"Selecciona el disco donde instalar Cranberry OS:\"" 18 62 8 $MENU_ARGS \
+    3>&1 1>&2 2>&3) || { whiptail --msgbox "Instalacion cancelada." 8 40; exit 1; }
+
+whiptail --title "Confirmar instalacion" --yesno \
+"Vas a instalar Cranberry OS en:
+
+    $DISK
+
+TODO el contenido de este disco sera borrado de forma permanente.
+
+Deseas continuar?" 14 60
+
+if [ $? -ne 0 ]; then
+    whiptail --msgbox "Instalacion cancelada. No se modifico ningun disco." 8 50
+    exit 1
+fi
+
+# Determinar el nombre de la particion (nvme/mmcblk usan sufijo p1)
+case "$DISK" in
+    *nvme*|*mmcblk*) PART="${DISK}p1" ;;
+    *) PART="${DISK}1" ;;
+esac
+
+(
+echo 5 ; echo "# Creando tabla de particiones..."
+parted -s "$DISK" mklabel msdos
+
+echo 15 ; echo "# Creando particion principal..."
+parted -s "$DISK" mkpart primary ext4 1MiB 100%
+parted -s "$DISK" set 1 boot on
+sleep 1
+
+echo 30 ; echo "# Formateando $PART como ext4..."
+mkfs.ext4 -F "$PART" > /dev/null 2>&1
+
+echo 45 ; echo "# Montando el disco destino..."
+mkdir -p "$TARGET"
+mount "$PART" "$TARGET"
+
+echo 55 ; echo "# Copiando el sistema (esto puede tardar unos minutos)..."
+rsync -aAXH \
+    --exclude=/proc --exclude=/sys --exclude=/dev \
+    --exclude=/run --exclude=/mnt --exclude=/media \
+    --exclude=/tmp --exclude="$TARGET" \
+    / "$TARGET"/ > /dev/null 2>&1
+
+echo 80 ; echo "# Preparando el entorno para instalar el arranque..."
+mount --bind /dev "$TARGET/dev"
+mount --bind /proc "$TARGET/proc"
+mount --bind /sys "$TARGET/sys"
+
+UUID=$(blkid -s UUID -o value "$PART")
+echo "UUID=$UUID / ext4 errors=remount-ro 0 1" > "$TARGET/etc/fstab"
+
+echo 90 ; echo "# Instalando GRUB en $DISK..."
+chroot "$TARGET" grub-install "$DISK" > /dev/null 2>&1
+chroot "$TARGET" update-grub > /dev/null 2>&1
+
+echo 95 ; echo "# Liberando el sistema..."
+umount "$TARGET/dev" "$TARGET/proc" "$TARGET/sys"
+umount "$TARGET"
+
+echo 100 ; echo "# Listo."
+) | whiptail --title "Instalando Cranberry OS" --gauge "Preparando instalacion..." 10 65 0
+
+whiptail --title "Instalacion completada" --msgbox \
+"Cranberry OS se instalo correctamente en $DISK.
+
+Quita el USB o CD de instalacion y reinicia la maquina para arrancar Cranberry OS desde el disco." 12 60
