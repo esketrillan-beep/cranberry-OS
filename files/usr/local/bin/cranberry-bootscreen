@@ -44,4 +44,11 @@ EOF
     clear
 fi
 
+# Si se arranco desde la opcion "Instalar Cranberry OS" del menu de arranque
+# (append cranberry-install en isolinux), corremos el instalador de una vez,
+# antes de caer al login normal.
+if grep -q "cranberry-install" /proc/cmdline 2>/dev/null; then
+    /usr/local/bin/cranberry-install
+fi
+
 exec /sbin/getty 38400 tty1
