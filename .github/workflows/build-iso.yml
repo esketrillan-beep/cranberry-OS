@@ -65,7 +65,7 @@ jobs:
       - name: Agregar paquetes para el escritorio (IceWM, navegador, archivos, wifi)
         run: |
           mkdir -p config/package-lists
-          printf "xserver-xorg\nxinit\nxserver-xorg-video-all\nxserver-xorg-input-all\nicewm\nxterm\nfirefox-esr\npcmanfm\npython3\nfeh\nnetwork-manager\nnetwork-manager-gnome\nfirmware-linux\nadwaita-icon-theme\nzenity\n" > config/package-lists/win7style.list.chroot
+          printf "xserver-xorg\nxinit\nxserver-xorg-video-all\nxserver-xorg-input-all\nicewm\nxterm\nfirefox-esr\npcmanfm\npython3\nfeh\nnetwork-manager\nnetwork-manager-gnome\nfirmware-linux\nadwaita-icon-theme\nlxappearance\n" > config/package-lists/win7style.list.chroot
 
       - name: Arreglar rutas viejas dentro del sistema
         run: |
@@ -126,7 +126,7 @@ jobs:
 
           printf 'Theme="Infadel2/default.theme"\n' > /root/.icewm/theme
 
-          printf 'prog "Terminal" utilities-terminal xterm\nprog "Archivos" system-file-manager pcmanfm\nprog "Navegador" web-browser firefox-esr\n' > /root/.icewm/toolbar
+          printf 'prog "Terminal" utilities-terminal xterm\nprog "Archivos" system-file-manager pcmanfm\nprog "Navegador" web-browser firefox-esr\nprog "Configuracion" preferences-system lxappearance\n' > /root/.icewm/toolbar
 
           if [ -f /usr/share/applications/firefox-esr.desktop ]; then
             cp /usr/share/applications/firefox-esr.desktop /root/Desktop/
@@ -139,11 +139,14 @@ jobs:
           elif [ -f /usr/share/applications/xterm.desktop ]; then
             cp /usr/share/applications/xterm.desktop /root/Desktop/
           fi
+          if [ -f /usr/share/applications/lxappearance.desktop ]; then
+            cp /usr/share/applications/lxappearance.desktop /root/Desktop/
+          fi
           chmod +x /root/Desktop/*.desktop 2>/dev/null || true
 
           printf '[*]\nwallpaper_mode=stretch\nwallpaper=/usr/share/backgrounds/cranberry-logo.png\ndesktop_bg=#0b0b0e\ndesktop_fg=#e8e6ea\ndesktop_shadow=#000000\nshow_wm_menu=0\n' > /root/.config/pcmanfm/default/desktop-items-0.conf
 
-          printf '#!/bin/sh\nwhile :; do\n  PW=$(zenity --password --title="Cranberry OS" --text="Ingresa la contrasena de root")\n  if [ "$PW" = "cranberry" ]; then\n    break\n  fi\n  zenity --error --title="Cranberry OS" --text="Contrasena incorrecta"\ndone\nfor S in network-manager NetworkManager; do\n  if [ -x "/etc/init.d/$S" ]; then\n    service "$S" start >/dev/null 2>&1 || true\n    break\n  fi\ndone\ncommand -v nm-applet >/dev/null 2>&1 && nm-applet &\npcmanfm --desktop --profile default &\nexec icewm-session\n' > /root/.xinitrc
+          printf '#!/bin/sh\nfor S in network-manager NetworkManager; do\n  if [ -x "/etc/init.d/$S" ]; then\n    service "$S" start >/dev/null 2>&1 || true\n    break\n  fi\ndone\ncommand -v nm-applet >/dev/null 2>&1 && nm-applet &\npcmanfm --desktop --profile default &\nexec icewm-session\n' > /root/.xinitrc
           chmod +x /root/.xinitrc
           HOOK
           chmod +x config/hooks/997-icewm-desktop.chroot
