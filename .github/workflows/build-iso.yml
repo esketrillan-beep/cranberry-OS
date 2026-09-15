@@ -48,12 +48,12 @@ jobs:
       - name: Agregar el kernel y herramientas de arranque dentro del sistema
         run: |
           mkdir -p config/package-lists
-          printf "linux-image-amd64\nisolinux\nsyslinux-common\nlibrsvg2-bin\n" > config/package-lists/kernel.list.chroot
+          printf "linux-image-amd64\nisolinux\nsyslinux-common\nlibrsvg2-bin\nparted\nrsync\ngrub-pc\n" > config/package-lists/kernel.list.chroot
 
       - name: Agregar paquetes para el escritorio propio
         run: |
           mkdir -p config/package-lists
-          printf "xserver-xorg\nxinit\nxserver-xorg-video-all\nxserver-xorg-input-all\nicewm\nxterm\nfirefox-esr\npcmanfm\npython3\n" > config/package-lists/win7style.list.chroot
+          printf "xserver-xorg\nxinit\nxserver-xorg-video-all\nxserver-xorg-input-all\nopenbox\nxterm\nfirefox-esr\npcmanfm\npython3\n" > config/package-lists/win7style.list.chroot
 
       - name: Arreglar rutas viejas dentro del sistema
         run: |
@@ -79,6 +79,13 @@ jobs:
           HOOK
           chmod +x config/hooks/996-boot-splash.chroot
 
+      - name: Agregar el instalador de Cranberry OS
+        run: |
+          mkdir -p config/includes.chroot/usr/local/bin config/hooks
+          cp files/usr/local/bin/cranberry-install config/includes.chroot/usr/local/bin/cranberry-install
+          printf '#!/bin/sh\nset -e\nchmod +x /usr/local/bin/cranberry-install\n' > config/hooks/995-installer.chroot
+          chmod +x config/hooks/995-installer.chroot
+
       - name: Configurar arranque del escritorio propio (shell HTML)
         run: |
           mkdir -p config/hooks
@@ -90,7 +97,7 @@ jobs:
           cat > /root/.xinitrc << 'XINITRC'
           #!/bin/sh
           /usr/local/bin/cranberry-launcherd &
-          icewm-session &
+          openbox &
           sleep 1
           exec firefox-esr --kiosk file:///usr/share/cranberry-shell/index.html
           XINITRC
@@ -98,4 +105,31 @@ jobs:
           HOOK
           chmod +x config/hooks/997-win7style-desktop.chroot
 
-      - name: Copiar archivos de marca de Cranberry OS y el
+      - name: Copiar archivos de marca de Cranberry OS y el shell propio
+        run: |
+          mkdir -p config/includes.chroot/etc
+          mkdir -p config/includes.chroot/usr/bin
+          mkdir -p config/includes.chroot/usr/share/cranberry-shell
+          mkdir -p config/includes.chroot/usr/local/bin
+          cp files/etc/issue      config/includes.chroot/etc/issue
+          cp files/etc/motd       config/includes.chroot/etc/motd
+          cp files/etc/os-release config/includes.chroot/etc/os-release
+          cp files/etc/bash.bashrc config/includes.chroot/etc/bash.bashrc
+          cp files/usr/bin/rsvg   config/includes.chroot/usr/bin/rsvg
+          cp files/usr/share/cranberry-shell/index.html config/includes.chroot/usr/share/cranberry-shell/index.html
+          cp files/usr/local/bin/cranberry-launcherd config/includes.chroot/usr/local/bin/cranberry-launcherd
+
+      - name: Construir la ISO
+        run: sudo lb build
+
+      - name: Renombrar la ISO
+        run: |
+          ISO_FILE=$(ls *.iso | head -n1)
+          mv "$ISO_FILE" cranberry-os-win7style.iso
+
+      - name: Subir la ISO como descarga
+        uses: actions/upload-artifact@v4
+        with:
+          name: cranberry-os-win7style-iso
+          path: cranberry-os-win7style.iso
+          retention-days: 14
