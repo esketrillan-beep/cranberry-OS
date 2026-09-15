@@ -102,7 +102,15 @@ jobs:
       - name: Habilitar NetworkManager al arrancar
         run: |
           mkdir -p config/hooks
-          printf '#!/bin/sh\nset -e\nupdate-rc.d network-manager defaults\n' > config/hooks/994-networkmanager.chroot
+          cat > config/hooks/994-networkmanager.chroot << 'HOOK'
+          #!/bin/sh
+          for S in network-manager NetworkManager; do
+            if [ -f "/etc/init.d/$S" ]; then
+              update-rc.d "$S" defaults || true
+            fi
+          done
+          exit 0
+          HOOK
           chmod +x config/hooks/994-networkmanager.chroot
 
       - name: Configurar arranque del escritorio propio (shell HTML, sin IceWM)
@@ -115,6 +123,13 @@ jobs:
 
           cat > /root/.xinitrc << 'XINITRC'
           #!/bin/sh
+          for S in network-manager NetworkManager; do
+            if [ -x "/etc/init.d/$S" ]; then
+              service "$S" start >/dev/null 2>&1 || true
+              break
+            fi
+          done
+          command -v nm-applet >/dev/null 2>&1 && nm-applet &
           /usr/local/bin/cranberry-launcherd &
           openbox &
           sleep 1
