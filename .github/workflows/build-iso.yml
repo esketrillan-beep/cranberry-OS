@@ -62,10 +62,10 @@ jobs:
           mkdir -p config/package-lists
           printf "linux-image-amd64\nisolinux\nsyslinux-common\nlibrsvg2-bin\nparted\nrsync\ngrub-pc\n" > config/package-lists/kernel.list.chroot
 
-      - name: Agregar paquetes para el escritorio propio (navegador, archivos, wifi)
+      - name: Agregar paquetes para el escritorio (IceWM, navegador, archivos, wifi)
         run: |
           mkdir -p config/package-lists
-          printf "xserver-xorg\nxinit\nxserver-xorg-video-all\nxserver-xorg-input-all\nopenbox\nxterm\nfirefox-esr\npcmanfm\npython3\nfeh\nnetwork-manager\nnetwork-manager-gnome\nfirmware-linux\n" > config/package-lists/win7style.list.chroot
+          printf "xserver-xorg\nxinit\nxserver-xorg-video-all\nxserver-xorg-input-all\nicewm\nxterm\nfirefox-esr\npcmanfm\npython3\nfeh\nnetwork-manager\nnetwork-manager-gnome\nfirmware-linux\nadwaita-icon-theme\nzenity\n" > config/package-lists/win7style.list.chroot
 
       - name: Arreglar rutas viejas dentro del sistema
         run: |
@@ -113,45 +113,50 @@ jobs:
           HOOK
           chmod +x config/hooks/994-networkmanager.chroot
 
-      - name: Configurar arranque del escritorio propio (shell HTML, sin IceWM)
+      - name: Configurar escritorio IceWM (tema, iconos reales, wallpaper, wifi)
         run: |
           mkdir -p config/hooks
-          cat > config/hooks/997-win7style-desktop.chroot << 'HOOK'
+          cat > config/hooks/997-icewm-desktop.chroot << 'HOOK'
           #!/bin/sh
           set -e
-          chmod +x /usr/local/bin/cranberry-launcherd
 
-          cat > /root/.xinitrc << 'XINITRC'
-          #!/bin/sh
-          for S in network-manager NetworkManager; do
-            if [ -x "/etc/init.d/$S" ]; then
-              service "$S" start >/dev/null 2>&1 || true
-              break
-            fi
-          done
-          command -v nm-applet >/dev/null 2>&1 && nm-applet &
-          /usr/local/bin/cranberry-launcherd &
-          openbox &
-          sleep 1
-          exec firefox-esr --kiosk file:///usr/share/cranberry-shell/index.html
-          XINITRC
+          mkdir -p /root/.icewm
+          mkdir -p /root/Desktop
+          mkdir -p /root/.config/pcmanfm/default
+
+          printf 'Theme="Infadel2/default.theme"\n' > /root/.icewm/theme
+
+          printf 'prog "Terminal" utilities-terminal xterm\nprog "Archivos" system-file-manager pcmanfm\nprog "Navegador" web-browser firefox-esr\n' > /root/.icewm/toolbar
+
+          if [ -f /usr/share/applications/firefox-esr.desktop ]; then
+            cp /usr/share/applications/firefox-esr.desktop /root/Desktop/
+          fi
+          if [ -f /usr/share/applications/pcmanfm.desktop ]; then
+            cp /usr/share/applications/pcmanfm.desktop /root/Desktop/
+          fi
+          if [ -f /usr/share/applications/debian-xterm.desktop ]; then
+            cp /usr/share/applications/debian-xterm.desktop /root/Desktop/xterm.desktop
+          elif [ -f /usr/share/applications/xterm.desktop ]; then
+            cp /usr/share/applications/xterm.desktop /root/Desktop/
+          fi
+          chmod +x /root/Desktop/*.desktop 2>/dev/null || true
+
+          printf '[*]\nwallpaper_mode=stretch\nwallpaper=/usr/share/backgrounds/cranberry-logo.png\ndesktop_bg=#0b0b0e\ndesktop_fg=#e8e6ea\ndesktop_shadow=#000000\nshow_wm_menu=0\n' > /root/.config/pcmanfm/default/desktop-items-0.conf
+
+          printf '#!/bin/sh\nwhile :; do\n  PW=$(zenity --password --title="Cranberry OS" --text="Ingresa la contrasena de root")\n  if [ "$PW" = "cranberry" ]; then\n    break\n  fi\n  zenity --error --title="Cranberry OS" --text="Contrasena incorrecta"\ndone\nfor S in network-manager NetworkManager; do\n  if [ -x "/etc/init.d/$S" ]; then\n    service "$S" start >/dev/null 2>&1 || true\n    break\n  fi\ndone\ncommand -v nm-applet >/dev/null 2>&1 && nm-applet &\npcmanfm --desktop --profile default &\nexec icewm-session\n' > /root/.xinitrc
           chmod +x /root/.xinitrc
           HOOK
-          chmod +x config/hooks/997-win7style-desktop.chroot
+          chmod +x config/hooks/997-icewm-desktop.chroot
 
-      - name: Copiar archivos de marca de Cranberry OS y el shell propio
+      - name: Copiar archivos de marca de Cranberry OS
         run: |
           mkdir -p config/includes.chroot/etc
           mkdir -p config/includes.chroot/usr/bin
-          mkdir -p config/includes.chroot/usr/share/cranberry-shell
-          mkdir -p config/includes.chroot/usr/local/bin
           cp files/etc/issue      config/includes.chroot/etc/issue
           cp files/etc/motd       config/includes.chroot/etc/motd
           cp files/etc/os-release config/includes.chroot/etc/os-release
           cp files/etc/bash.bashrc config/includes.chroot/etc/bash.bashrc
           cp files/usr/bin/rsvg   config/includes.chroot/usr/bin/rsvg
-          cp files/usr/share/cranberry-shell/index.html config/includes.chroot/usr/share/cranberry-shell/index.html
-          cp files/usr/local/bin/cranberry-launcherd config/includes.chroot/usr/local/bin/cranberry-launcherd
 
       - name: Construir la ISO
         run: sudo lb build
