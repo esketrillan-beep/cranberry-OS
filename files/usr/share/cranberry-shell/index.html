@@ -19,12 +19,27 @@
   .icon { width: 76px; display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; }
   .icon .glyph {
     width: 42px; height: 42px; border-radius: 8px;
-    display: flex; align-items: center; justify-content: center; font-size: 22px;
+    display: flex; align-items: center; justify-content: center;
     background: linear-gradient(180deg, rgba(255,255,255,0.35), rgba(255,255,255,0.05));
     border: 1px solid rgba(255,255,255,0.25);
+    color: #fff;
+    transition: background 0.25s ease, transform 0.2s ease, box-shadow 0.25s ease;
   }
-  .icon span { color: #fff; font-size: 11px; text-align: center; text-shadow: 0 1px 3px rgba(0,0,0,0.7); line-height: 1.2; }
-  .icon:active .glyph { background: rgba(90,150,230,0.5); }
+  .icon .glyph svg { transition: transform 0.2s ease; }
+  .icon span { color: #fff; font-size: 11px; text-align: center; text-shadow: 0 1px 3px rgba(0,0,0,0.7); line-height: 1.2; transition: color 0.2s ease; }
+  .icon:hover .glyph {
+    background: rgba(255,255,255,0.3);
+    transform: translateY(-3px);
+    box-shadow: 0 6px 14px rgba(0,0,0,0.35);
+  }
+  .icon:hover .glyph svg { transform: scale(1.08); }
+  .icon:active .glyph { background: rgba(90,150,230,0.5); transform: translateY(-1px) scale(0.96); }
+
+  .icon {
+    opacity: 0; transform: translateY(8px);
+    animation: iconIn 0.45s ease forwards;
+  }
+  @keyframes iconIn { to { opacity: 1; transform: translateY(0); } }
 
   /* -------- Taskbar -------- */
   .taskbar {
@@ -33,25 +48,32 @@
     backdrop-filter: blur(6px);
     border-top: 1px solid rgba(255,255,255,0.3);
     display: flex; align-items: center; padding: 0 6px; gap: 8px;
+    transform: translateY(100%);
+    animation: taskbarIn 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) 0.15s forwards;
   }
+  @keyframes taskbarIn { to { transform: translateY(0); } }
 
   .start-orb {
     width: 40px; height: 40px; border-radius: 50%;
     background: radial-gradient(circle at 35% 30%, #7fd0ff, #1f8fe0 45%, #0a4fa0 80%);
     border: 1px solid rgba(255,255,255,0.5);
     display: flex; align-items: center; justify-content: center;
-    font-weight: 700; color: #fff; font-size: 16px; cursor: pointer;
+    color: #fff; cursor: pointer;
     box-shadow: 0 0 8px rgba(60,150,255,0.6);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.15s ease;
   }
-  .start-orb:active { filter: brightness(0.85); }
+  .start-orb:hover { transform: scale(1.08); box-shadow: 0 0 14px rgba(90,170,255,0.85); }
+  .start-orb:active { filter: brightness(0.85); transform: scale(0.95); }
 
   .taskbar-apps { display: flex; gap: 6px; flex: 1; height: 32px; }
   .taskbar-app {
     background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
     border-radius: 3px; color: #eaf3ff; font-size: 12px; padding: 0 12px;
     display: flex; align-items: center; cursor: pointer;
+    transition: background 0.2s ease, transform 0.15s ease;
   }
-  .taskbar-app:hover { background: rgba(255,255,255,0.18); }
+  .taskbar-app:hover { background: rgba(255,255,255,0.18); transform: translateY(-1px); }
+  .taskbar-app:active { transform: translateY(0); }
 
   .clock {
     color: #eaf3ff; font-size: 12px; padding: 0 12px; text-align: right; line-height: 1.2;
@@ -64,9 +86,18 @@
     background: linear-gradient(180deg, rgba(20,40,80,0.92), rgba(10,20,45,0.96));
     border: 1px solid rgba(255,255,255,0.3); border-radius: 6px 6px 0 0;
     backdrop-filter: blur(8px);
-    display: none; flex-direction: column; overflow: hidden;
+    display: flex; flex-direction: column; overflow: hidden;
+    transform-origin: bottom left;
+    transform: translateY(12px) scale(0.96);
+    opacity: 0;
+    pointer-events: none;
+    transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.18s ease;
   }
-  .start-menu.open { display: flex; }
+  .start-menu.open {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+    pointer-events: auto;
+  }
   .start-menu .header {
     padding: 12px 14px; color: #fff; font-size: 13px; font-weight: 600;
     background: rgba(255,255,255,0.06); border-bottom: 1px solid rgba(255,255,255,0.15);
@@ -74,55 +105,94 @@
   .start-menu .item {
     padding: 10px 14px; color: #eaf3ff; font-size: 13px;
     display: flex; align-items: center; gap: 10px; cursor: pointer;
+    transition: background 0.15s ease, padding-left 0.15s ease;
   }
-  .start-menu .item:hover { background: rgba(120,180,255,0.25); }
-  .start-menu .item .glyph { font-size: 16px; width: 20px; text-align: center; }
+  .start-menu .item:hover { background: rgba(120,180,255,0.25); padding-left: 18px; }
+  .start-menu .item .glyph { width: 20px; display: flex; align-items: center; justify-content: center; color: #eaf3ff; }
 
   /* -------- Toast (feedback when launching) -------- */
   .toast {
     position: absolute; top: 20px; right: 20px;
     background: rgba(10,20,45,0.85); color: #eaf3ff; font-size: 12px;
     padding: 10px 16px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.25);
-    opacity: 0; transition: opacity 0.3s ease; pointer-events: none;
+    opacity: 0; transform: translateY(-8px);
+    transition: opacity 0.3s cubic-bezier(0.2,0.8,0.2,1), transform 0.3s cubic-bezier(0.2,0.8,0.2,1);
+    pointer-events: none;
   }
-  .toast.show { opacity: 1; }
+  .toast.show { opacity: 1; transform: translateY(0); }
 
   .brand { position: absolute; top: 20px; right: 20px; color: rgba(255,255,255,0.5); font-size: 13px; letter-spacing: 1px; }
 </style>
 </head>
 <body>
+  <svg style="display:none">
+    <symbol id="icon-pc" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="4" width="18" height="12" rx="1.2"/>
+      <path d="M8 20h8M12 16v4"/>
+    </symbol>
+    <symbol id="icon-globe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="9"/>
+      <path d="M3 12h18M12 3c2.5 2.6 3.8 5.8 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.8-3.8-9s1.3-6.4 3.8-9z"/>
+    </symbol>
+    <symbol id="icon-terminal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="4" width="18" height="16" rx="1.2"/>
+      <path d="M7 9l3.5 3L7 15M13 15h4"/>
+    </symbol>
+    <symbol id="icon-install" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 3v11m0 0l-4-4m4 4l4-4"/>
+      <path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/>
+    </symbol>
+    <symbol id="icon-wifi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3.5 9.5a13 13 0 0 1 17 0"/>
+      <path d="M6.7 13a8.5 8.5 0 0 1 10.6 0"/>
+      <path d="M9.8 16.4a4 4 0 0 1 4.4 0"/>
+      <circle cx="12" cy="19.2" r="1" fill="currentColor" stroke="none"/>
+    </symbol>
+    <symbol id="icon-start" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3.5" y="3.5" width="7.5" height="7.5" rx="1"/>
+      <rect x="13" y="3.5" width="7.5" height="7.5" rx="1"/>
+      <rect x="3.5" y="13" width="7.5" height="7.5" rx="1"/>
+      <rect x="13" y="13" width="7.5" height="7.5" rx="1"/>
+    </symbol>
+  </svg>
+
 
   <div class="brand" id="brand">Cranberry OS</div>
 
   <div class="desktop">
-    <div class="icon" onclick="launch('files')">
-      <div class="glyph">🗀</div>
+    <div class="icon" style="animation-delay:0.05s" onclick="launch('files')">
+      <div class="glyph"><svg width="22" height="22" viewBox="0 0 24 24"><use href="#icon-pc"/></svg></div>
       <span>Mi PC</span>
     </div>
-    <div class="icon" onclick="launch('firefox')">
-      <div class="glyph">🌐</div>
+    <div class="icon" style="animation-delay:0.12s" onclick="launch('firefox')">
+      <div class="glyph"><svg width="22" height="22" viewBox="0 0 24 24"><use href="#icon-globe"/></svg></div>
       <span>Internet</span>
     </div>
-    <div class="icon" onclick="launch('terminal')">
-      <div class="glyph">&gt;_</div>
+    <div class="icon" style="animation-delay:0.19s" onclick="launch('terminal')">
+      <div class="glyph"><svg width="22" height="22" viewBox="0 0 24 24"><use href="#icon-terminal"/></svg></div>
       <span>Terminal</span>
     </div>
-    <div class="icon" onclick="launch('install')">
-      <div class="glyph">&#128190;</div>
+    <div class="icon" style="animation-delay:0.26s" onclick="launch('install')">
+      <div class="glyph"><svg width="22" height="22" viewBox="0 0 24 24"><use href="#icon-install"/></svg></div>
       <span>Instalar Cranberry OS</span>
+    </div>
+    <div class="icon" style="animation-delay:0.33s" onclick="launch('network')">
+      <div class="glyph"><svg width="22" height="22" viewBox="0 0 24 24"><use href="#icon-wifi"/></svg></div>
+      <span>Configurar WiFi</span>
     </div>
   </div>
 
   <div class="start-menu" id="startMenu">
     <div class="header">root@cranberry</div>
-    <div class="item" onclick="launch('firefox'); toggleStart()"><span class="glyph">🌐</span> Internet</div>
-    <div class="item" onclick="launch('files'); toggleStart()"><span class="glyph">🗀</span> Explorador de archivos</div>
-    <div class="item" onclick="launch('terminal'); toggleStart()"><span class="glyph">&gt;_</span> Terminal</div>
-    <div class="item" onclick="launch('install'); toggleStart()"><span class="glyph">&#128190;</span> Instalar Cranberry OS</div>
+    <div class="item" onclick="launch('firefox'); toggleStart()"><span class="glyph"><svg width="22" height="22" viewBox="0 0 24 24"><use href="#icon-globe"/></svg></span> Internet</div>
+    <div class="item" onclick="launch('files'); toggleStart()"><span class="glyph"><svg width="22" height="22" viewBox="0 0 24 24"><use href="#icon-pc"/></svg></span> Explorador de archivos</div>
+    <div class="item" onclick="launch('terminal'); toggleStart()"><span class="glyph"><svg width="22" height="22" viewBox="0 0 24 24"><use href="#icon-terminal"/></svg></span> Terminal</div>
+    <div class="item" onclick="launch('install'); toggleStart()"><span class="glyph"><svg width="22" height="22" viewBox="0 0 24 24"><use href="#icon-install"/></svg></span> Instalar Cranberry OS</div>
+    <div class="item" onclick="launch('network'); toggleStart()"><span class="glyph"><svg width="22" height="22" viewBox="0 0 24 24"><use href="#icon-wifi"/></svg></span> Configurar WiFi</div>
   </div>
 
   <div class="taskbar">
-    <div class="start-orb" onclick="toggleStart()">❖</div>
+    <div class="start-orb" onclick="toggleStart()"><svg width="22" height="22" viewBox="0 0 24 24"><use href="#icon-start"/></svg></div>
     <div class="taskbar-apps" id="taskbarApps"></div>
     <div class="clock" id="clock"></div>
   </div>
@@ -154,6 +224,7 @@
     if (app === 'files') return 'Explorador de archivos';
     if (app === 'terminal') return 'Terminal';
     if (app === 'install') return 'el instalador';
+    if (app === 'network') return 'la configuracion de red';
     return app;
   }
 
