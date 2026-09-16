@@ -65,7 +65,7 @@ jobs:
       - name: Agregar paquetes para el escritorio (IceWM, navegador, archivos, wifi)
         run: |
           mkdir -p config/package-lists
-          printf "xserver-xorg\nxinit\nxserver-xorg-video-all\nxserver-xorg-input-all\nicewm\nxterm\nfirefox-esr\npcmanfm\npython3\nfeh\nnetwork-manager\nnetwork-manager-gnome\nfirmware-linux\nadwaita-icon-theme\nlxappearance\n" > config/package-lists/desktop.list.chroot
+          printf "xserver-xorg\nxinit\nxserver-xorg-video-all\nxserver-xorg-input-all\nicewm\nxterm\nfirefox-esr\npcmanfm\npython3\nfeh\nnetwork-manager\nnetwork-manager-gnome\nfirmware-linux\nadwaita-icon-theme\n" > config/package-lists/desktop.list.chroot
 
       - name: Arreglar rutas viejas dentro del sistema
         run: |
@@ -73,9 +73,9 @@ jobs:
           cat > config/hooks/999-fix-isolinux-paths.chroot << 'HOOK'
           #!/bin/sh
           set -e
-          mkdir -p /usr/lib/syslinux
+          mkdir -p /usr/lib/syslinux/modules/bios
           ln -sf /usr/lib/ISOLINUX/isolinux.bin /usr/lib/syslinux/isolinux.bin
-          ln -sf /usr/lib/syslinux/modules/bios/vesamenu.c32 /usr/lib/syslinux/modules/bios/vesamenu.c32
+          ln -sf /usr/share/syslinux/vesamenu.c32 /usr/lib/syslinux/modules/bios/vesamenu.c32
           HOOK
           chmod +x config/hooks/999-fix-isolinux-paths.chroot
 
