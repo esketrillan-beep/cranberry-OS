@@ -58,7 +58,9 @@ $(lsblk -dno NAME,SIZE,MODEL)
 EOF
 
 if [ "$COUNT" -eq 0 ]; then
-    whiptail --msgbox "No se encontro ningun disco valido para instalar. Cancelando." 10 50
+    whiptail --msgbox "No se encontro ningun disco disponible para instalar.
+
+Si estas en una maquina virtual, revisa que tenga un disco duro virtual conectado (ademas del CD/USB de arranque)." 12 62
     exit 1
 fi
 
@@ -66,16 +68,18 @@ DISK=$(eval whiptail --title "Elige el disco de instalacion" \
     --menu "\"Selecciona el disco donde instalar Cranberry OS:\"" 18 62 8 $MENU_ARGS \
     3>&1 1>&2 2>&3) || { whiptail --msgbox "Instalacion cancelada." 8 40; exit 1; }
 
-whiptail --title "Confirmar instalacion" --yesno \
+CONFIRM=$(whiptail --title "Confirmar instalacion" --inputbox \
 "Vas a instalar Cranberry OS en:
 
     $DISK
 
 TODO el contenido de este disco sera borrado de forma permanente.
 
-Deseas continuar?" 14 60
+Escribe SI (en mayusculas) y presiona Enter para continuar.
+Cualquier otra cosa cancela la instalacion." 16 60 \
+    3>&1 1>&2 2>&3)
 
-if [ $? -ne 0 ]; then
+if [ "$CONFIRM" != "SI" ]; then
     whiptail --msgbox "Instalacion cancelada. No se modifico ningun disco." 8 50
     exit 1
 fi
