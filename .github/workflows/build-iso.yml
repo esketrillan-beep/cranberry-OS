@@ -1,4 +1,4 @@
-name: Build Cranberry OS Win7Style ISO
+name: Build Cranberry OS Nexus ISO
 
 on:
   workflow_dispatch:
@@ -24,22 +24,10 @@ jobs:
         run: |
           sudo sed -i '/# Hack around the removal of support in gfxboot/,/rm -rf "\$tmpdir"/d' /usr/lib/live/build/lb_binary_syslinux
 
-      - name: Crear tema isolinux con isolinux.bin, splash propio y opcion de instalar
+      - name: Crear tema isolinux con isolinux.bin y modulos reales
         run: |
           mkdir -p config/bootloaders/isolinux
           cp -a /usr/share/live/build/bootloaders/isolinux/. config/bootloaders/isolinux/
-
-          rm -f config/bootloaders/isolinux/splash.svg.in
-          cp files/boot-splash/splash.png config/bootloaders/isolinux/splash.png
-
-          cat >> config/bootloaders/isolinux/live.cfg.in << 'EOF'
-
-          label install-@FLAVOUR@
-          	menu label ^Instalar Cranberry OS
-          	kernel @KERNEL@
-          	append initrd=@INITRD@ boot=live config @LB_BOOTAPPEND_LIVE@ cranberry-install
-          EOF
-
           find /usr/lib -iname "isolinux.bin" -exec cp -v {} config/bootloaders/isolinux/ \;
           find /usr/lib/syslinux/modules/bios -iname "*.c32" -exec cp -v {} config/bootloaders/isolinux/ \;
 
@@ -60,23 +48,17 @@ jobs:
       - name: Agregar el kernel y herramientas de arranque dentro del sistema
         run: |
           mkdir -p config/package-lists
-          printf "linux-image-amd64\nisolinux\nsyslinux-common\nlibrsvg2-bin\nparted\nrsync\ngrub-pc\n" > config/package-lists/kernel.list.chroot
+          printf "linux-image-amd64\nisolinux\nsyslinux-common\nlibrsvg2-bin\n" > config/package-lists/kernel.list.chroot
 
-      - name: Agregar paquetes para el escritorio (IceWM, navegador, archivos, wifi)
+      - name: Agregar el escritorio completo Nexus (X11, IceWM, archivos, terminal, navegador)
         run: |
           mkdir -p config/package-lists
-          printf "xserver-xorg\nxinit\nxserver-xorg-video-all\nxserver-xorg-input-all\nicewm\nxterm\nfirefox-esr\npcmanfm\npython3\nfeh\nnetwork-manager\nnetwork-manager-gnome\nfirmware-linux\nadwaita-icon-theme\n" > config/package-lists/desktop.list.chroot
+          printf "xserver-xorg\nxinit\nxserver-xorg-video-all\nxserver-xorg-input-all\nicewm\nxterm\nlxterminal\npcmanfm\nfirefox-esr\nadwaita-icon-theme\nfeh\nlxappearance\npicom\n" > config/package-lists/nexus.list.chroot
 
       - name: Arreglar rutas viejas dentro del sistema
         run: |
           mkdir -p config/hooks
-          cat > config/hooks/999-fix-isolinux-paths.chroot << 'HOOK'
-          #!/bin/sh
-          set -e
-          mkdir -p /usr/lib/syslinux/modules/bios
-          ln -sf /usr/lib/ISOLINUX/isolinux.bin /usr/lib/syslinux/isolinux.bin
-          ln -sf /usr/share/syslinux/vesamenu.c32 /usr/lib/syslinux/modules/bios/vesamenu.c32
-          HOOK
+          printf '#!/bin/sh\nset -e\nmkdir -p /usr/lib/syslinux\nln -sf /usr/lib/ISOLINUX/isolinux.bin /usr/lib/syslinux/isolinux.bin\nln -sf /usr/lib/syslinux/modules/bios/vesamenu.c32 /usr/lib/syslinux/vesamenu.c32\nchmod +x /usr/bin/rsvg\n' > config/hooks/999-fix-isolinux-paths.chroot
           chmod +x config/hooks/999-fix-isolinux-paths.chroot
 
       - name: Ponerle contrasena a root
@@ -85,48 +67,10 @@ jobs:
           printf '#!/bin/sh\nset -e\necho "root:cranberry" | chpasswd\n' > config/hooks/998-set-root-password.chroot
           chmod +x config/hooks/998-set-root-password.chroot
 
-      - name: Configurar pantalla de carga ASCII (y arranque directo al instalador)
-        run: |
-          mkdir -p config/hooks config/includes.chroot/usr/local/bin
-          cp files/usr/local/bin/cranberry-bootscreen config/includes.chroot/usr/local/bin/cranberry-bootscreen
-          cat > config/hooks/996-boot-splash.chroot << 'HOOK'
-          #!/bin/sh
-          set -e
-          chmod +x /usr/local/bin/cranberry-bootscreen
-          sed -i 's#^\(1:2345:respawn:\).*getty.*tty1.*#\1/usr/local/bin/cranberry-bootscreen#' /etc/inittab
-          HOOK
-          chmod +x config/hooks/996-boot-splash.chroot
-
-      - name: Agregar el instalador de Cranberry OS
-        run: |
-          mkdir -p config/includes.chroot/usr/local/bin config/includes.chroot/usr/share/backgrounds config/hooks
-          cp files/usr/local/bin/cranberry-install config/includes.chroot/usr/local/bin/cranberry-install
-          if [ -f "files/usr/share/backgrounds/cranberry-logo.png" ]; then
-            cp files/usr/share/backgrounds/cranberry-logo.png config/includes.chroot/usr/share/backgrounds/cranberry-logo.png
-          else
-            echo "Advertencia: cranberry-logo.png no encontrado, continuando sin él"
-          fi
-          printf '#!/bin/sh\nset -e\nchmod +x /usr/local/bin/cranberry-install\n' > config/hooks/995-installer.chroot
-          chmod +x config/hooks/995-installer.chroot
-
-      - name: Habilitar NetworkManager al arrancar
+      - name: Configurar escritorio Nexus (tema Windows 7 + efecto vidrio, apps, wallpaper)
         run: |
           mkdir -p config/hooks
-          cat > config/hooks/994-networkmanager.chroot << 'HOOK'
-          #!/bin/sh
-          for S in network-manager NetworkManager; do
-            if [ -f "/etc/init.d/$S" ]; then
-              update-rc.d "$S" defaults || true
-            fi
-          done
-          exit 0
-          HOOK
-          chmod +x config/hooks/994-networkmanager.chroot
-
-      - name: Configurar escritorio IceWM (tema, iconos reales, wallpaper, wifi)
-        run: |
-          mkdir -p config/hooks
-          cat > config/hooks/997-icewm-desktop.chroot << 'HOOK'
+          cat > config/hooks/997-nexus-desktop.chroot << 'HOOK'
           #!/bin/sh
           set -e
 
@@ -134,46 +78,38 @@ jobs:
           mkdir -p /root/Desktop
           mkdir -p /root/.config/pcmanfm/default
 
-          printf 'Theme="Infadel2/default.theme"\n' > /root/.icewm/theme
+          printf 'Look="flat"\nIconThemeName="Adwaita"\nActiveBorderBg="#3d7fd6"\nInactiveBorderBg="#8fb4e0"\nActiveTitleBarBg="#2f6fc9 #6fa8f0"\nActiveTitleBarFg="#ffffff"\nInactiveTitleBarBg="#a9c6ec"\nInactiveTitleBarFg="#eaf2fc"\nMenuBg="#eef4fc"\nMenuFg="#0a2a4a"\nActiveMenuItemBg="#3d7fd6"\nActiveMenuItemFg="#ffffff"\nTaskBarBg="#dce9fb"\nTaskBarFg="#0a2a4a"\nButtonBg="#bcdcff"\nButtonFg="#0a2a4a"\n' > /root/.icewm/preferences
 
-          printf 'prog "Terminal" utilities-terminal xterm\nprog "Archivos" system-file-manager pcmanfm\nprog "Navegador" web-browser firefox-esr\nprog "Configuracion" preferences-system lxappearance\n' > /root/.icewm/menu
+          printf 'prog "Terminal" utilities-terminal lxterminal\nprog "Archivos" system-file-manager pcmanfm\nprog "Navegador" web-browser firefox-esr\nprog "Personalizacion" preferences-system lxappearance\n' > /root/.icewm/toolbar
 
-          if [ -f /usr/share/applications/firefox-esr.desktop ]; then
-            cp /usr/share/applications/firefox-esr.desktop /root/Desktop/
-          fi
-          if [ -f /usr/share/applications/pcmanfm.desktop ]; then
-            cp /usr/share/applications/pcmanfm.desktop /root/Desktop/
-          fi
-          if [ -f /usr/share/applications/debian-xterm.desktop ]; then
-            cp /usr/share/applications/debian-xterm.desktop /root/Desktop/xterm.desktop
-          elif [ -f /usr/share/applications/xterm.desktop ]; then
-            cp /usr/share/applications/xterm.desktop /root/Desktop/
-          fi
-          if [ -f /usr/share/applications/lxappearance.desktop ]; then
-            cp /usr/share/applications/lxappearance.desktop /root/Desktop/
-          fi
+          for APP in firefox-esr pcmanfm lxterminal lxappearance; do
+            if [ -f "/usr/share/applications/${APP}.desktop" ]; then
+              cp "/usr/share/applications/${APP}.desktop" /root/Desktop/
+            fi
+          done
           chmod +x /root/Desktop/*.desktop 2>/dev/null || true
 
-          if [ -f /usr/share/backgrounds/cranberry-logo.png ]; then
-            printf '[*]\nwallpaper_mode=stretch\nwallpaper=/usr/share/backgrounds/cranberry-logo.png\ndesktop_bg=#0b0b0e\ndesktop_fg=#e8e6ea\ndesktop_shadow=#000000\nshow_wm_menu=0\n' > /root/.config/pcmanfm/default/pcmanfm.conf
-          else
-            printf '[*]\ndesktop_bg=#0b0b0e\ndesktop_fg=#e8e6ea\ndesktop_shadow=#000000\nshow_wm_menu=0\n' > /root/.config/pcmanfm/default/pcmanfm.conf
-          fi
+          printf '[*]\nwallpaper_mode=stretch\nwallpaper=/usr/share/backgrounds/cranberry-nexus-wallpaper.jpg\ndesktop_bg=#0b0b0e\ndesktop_fg=#e8e6ea\ndesktop_shadow=#000000\nshow_wm_menu=0\n' > /root/.config/pcmanfm/default/desktop-items-0.conf
 
-          printf '#!/bin/sh\nfor S in network-manager NetworkManager; do\n  if [ -x "/etc/init.d/$S" ]; then\n    service "$S" start >/dev/null 2>&1 || true\n    break\n  fi\ndone\ncommand -v nm-applet >/dev/null 2>&1 && nm-applet &\nexec startx\n' > /root/.xinitrc
+          mkdir -p /root/.config/picom
+          printf 'backend = "xrender";\ncorner-radius = 0;\nblur-method = "dual_kawase";\nblur-strength = 6;\nblur-background = true;\nopacity-rule = [ "85:class_g = '"'"'icewm'"'"'" ];\n' > /root/.config/picom/picom.conf
+
+          printf '#!/bin/sh\nfeh --bg-fill /usr/share/backgrounds/cranberry-nexus-wallpaper.jpg\npicom --config /root/.config/picom/picom.conf -b\npcmanfm --desktop --profile default &\nexec icewm-session\n' > /root/.xinitrc
           chmod +x /root/.xinitrc
           HOOK
-          chmod +x config/hooks/997-icewm-desktop.chroot
+          chmod +x config/hooks/997-nexus-desktop.chroot
 
       - name: Copiar archivos de marca de Cranberry OS
         run: |
           mkdir -p config/includes.chroot/etc
           mkdir -p config/includes.chroot/usr/bin
+          mkdir -p config/includes.chroot/usr/share/backgrounds
           cp files/etc/issue      config/includes.chroot/etc/issue
           cp files/etc/motd       config/includes.chroot/etc/motd
           cp files/etc/os-release config/includes.chroot/etc/os-release
           cp files/etc/bash.bashrc config/includes.chroot/etc/bash.bashrc
           cp files/usr/bin/rsvg   config/includes.chroot/usr/bin/rsvg
+          cp files/usr/share/backgrounds/cranberry-nexus-wallpaper.jpg config/includes.chroot/usr/share/backgrounds/cranberry-nexus-wallpaper.jpg
 
       - name: Construir la ISO
         run: sudo lb build
@@ -181,11 +117,11 @@ jobs:
       - name: Renombrar la ISO
         run: |
           ISO_FILE=$(ls *.iso | head -n1)
-          mv "$ISO_FILE" cranberry-os-win7style.iso
+          mv "$ISO_FILE" cranberry-os.iso
 
       - name: Subir la ISO como descarga
         uses: actions/upload-artifact@v4
         with:
-          name: cranberry-os-win7style-iso
-          path: cranberry-os-win7style.iso
+          name: cranberry-os-iso
+          path: cranberry-os.iso
           retention-days: 14
